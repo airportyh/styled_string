@@ -1,12 +1,17 @@
 var expect = require('chai').expect
 var StyledString = require('./index.js')
+var spy = require('sinon').spy
 
 describe('StyledString', function(){
+    
     it('instantiates', function(){
         StyledString('abc')
     })
     it('has length', function(){
         expect(StyledString('abc').length).to.equal(3)
+    })
+    it('leave allow if no string', function(){
+        expect(StyledString('abc').toString()).to.equal('abc')
     })
     it('has attributes', function(){
         var s = StyledString('abc', {foreground: 'red'})
@@ -112,5 +117,61 @@ describe('StyledString', function(){
         var s2 = StyledString('def', {foreground: 'green'})
         var s3 = s1.concat(s2)
         expect(s3.unstyled()).to.equal('abcdef')
+    })
+
+    // Non-string-like methods
+    it('can be appended to', function(){
+        var s = StyledString('abc', {foreground: 'red'})
+        expect(s.append(StyledString('def', {foreground: 'green'}))).to.equal(s)
+        expect(s.toString()).to.equal('\033[31mabc\033[0m\033[32mdef\033[0m')
+    })
+    it('can be appended to 2 (compound)', function(){
+        var s1 = StyledString('abc', {foreground: 'red'})
+        var s2 = StyledString('def', {foreground: 'blue'})
+        var s3 = s1.concat(s2)
+        expect(s3.append(StyledString('ghi', {foreground: 'green'}))).to.equal(s3)
+        expect(s3.toString()).to.equal('\u001b[31mabc\u001b[0m\u001b[34mdef\u001b[0m\u001b[32mghi\u001b[0m')
+    })
+
+    it('can set attributes using methods', function(){
+        var s = StyledString('abc')
+        var s_ = s.attr({
+            foreground: 'red'
+        })
+        expect(s === s_).to.be.ok
+        expect(s.attrs.foreground).to.equal('red')
+    })
+    it('can set attributes using methods 2 (compound', function(){
+        var s = StyledString('abc').append(StyledString('def'))
+        expect(s.toString()).to.equal('abcdef')
+        s.attr({
+            foreground: 'green'
+        })
+        expect(s.toString()).to.equal('\033[32mabcdef\033[0m')
+    })
+
+    describe('convinience styling methods', function(){
+        beforeEach(function(){
+            spy(StyledString.prototype, 'attr')
+        })
+        afterEach(function(){
+            StyledString.prototype.attr.restore()
+        })
+        it('can set foreground using foreground()', function(){
+            
+            var s = StyledString('abc')
+            expect(s.foreground('red')).to.equal(s)
+            expect(StyledString.prototype.attr.calledWith({foreground: 'red'})).to.be.ok
+        })
+        it('can set background using background()', function(){
+            var s = StyledString('abc')
+            expect(s.background('red')).to.equal(s)
+            expect(StyledString.prototype.attr.calledWith({background: 'red'})).to.be.ok
+        })
+        it('can set display attribute using display()', function(){
+            var s = StyledString('abc')
+            expect(s.display('reset')).to.equal(s)
+            expect(StyledString.prototype.attr.calledWith({display: 'reset'})).to.be.ok
+        })
     })
 })

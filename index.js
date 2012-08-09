@@ -36,10 +36,8 @@ function StyledString(str, attrs, children){
     }
     this.str = str
     this.children = children
-    this.length = str != null ? str.length : children.reduce(function(curr, child){
-        return curr + child.length
-    }, 0)
-    this.attrs = attrs
+    this.length = str != null ? str.length : this.childrenLength()
+    this.attrs = attrs || {}
 }
 
 StyledString.prototype.substring = function(){
@@ -66,6 +64,12 @@ StyledString.prototype.substring = function(){
         })
         return retval
     }
+}
+
+StyledString.prototype.childrenLength = function(){
+    return this.children.reduce(function(curr, child){
+        return curr + child.length
+    }, 0)
 }
 
 StyledString.prototype.substr = StyledString.prototype.substring
@@ -125,29 +129,68 @@ StyledString.prototype.unstyled = function(){
     }
 }
 
-StyledString.prototype.toString = function(){
-    if (this.str != null){
-        var str = this.str
-        if (this.attrs){
-            for (var key in this.attrs){
-                if (Attributes[key]){
-                    var code = Attributes[key][this.attrs[key]]
-                    if (code){
-                        str = '\033[' + code + 'm' + str + '\033[0m'
-                    }
-                }
+StyledString.prototype.applyAttrs = function(str){
+    for (var key in this.attrs){
+        if (Attributes[key]){
+            var code = Attributes[key][this.attrs[key]]
+            if (code){
+                str = '\033[' + code + 'm' + str + '\033[0m'
             }
         }
-        return str
+    }
+    return str
+}
+
+StyledString.prototype.toString = function(){
+    var str
+    if (this.str != null){
+        str = this.str
     }else{
-        return this.children.reduce(function(curr, child){
+        str = this.children.reduce(function(curr, child){
             if (child.length > 0)
                 return curr + child.toString()
             else
                 return curr
         }, '')
     }
+    return this.applyAttrs(str)
 }
+
+// Non-string-like methods
+StyledString.prototype.append = function(another){
+    if (this.str != null){
+        this.children = [StyledString(this.str, this.attrs), another]
+        this.str = null
+        this.attrs = {}
+        this.length = this.childrenLength()
+    }else{
+        this.children.push(another)
+    }
+    return this
+}
+
+StyledString.prototype.attr = function(attrs){
+    for (var key in attrs){
+        this.attrs[key] = attrs[key]
+    }
+    return this
+}
+
+StyledString.prototype.foreground = function(color){
+    this.attr({foreground: color})
+    return this
+}
+
+StyledString.prototype.background = function(color){
+    this.attr({background: color})
+    return this
+}
+
+StyledString.prototype.display = function(value){
+    this.attr({display: value})
+    return this
+}
+
 
 StyledString.Attributes = Attributes
 
